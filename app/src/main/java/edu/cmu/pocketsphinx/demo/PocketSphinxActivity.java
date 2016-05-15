@@ -67,6 +67,7 @@ public class PocketSphinxActivity extends Activity implements
 
     /* Used to handle permission request */
     private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
+    private static final String HEXY_SEARCH = "hexy";
 
     private SpeechRecognizer recognizer;
     private HashMap<String, Integer> captions;
@@ -82,6 +83,8 @@ public class PocketSphinxActivity extends Activity implements
         captions.put(DIGITS_SEARCH, R.string.digits_caption);
         captions.put(PHONE_SEARCH, R.string.phone_caption);
         captions.put(FORECAST_SEARCH, R.string.forecast_caption);
+        captions.put(HEXY_SEARCH, R.string.hexy_caption);
+
         setContentView(R.layout.main);
         ((TextView) findViewById(R.id.caption_text))
                 .setText("Preparing the recognizer");
@@ -117,7 +120,7 @@ public class PocketSphinxActivity extends Activity implements
                     ((TextView) findViewById(R.id.caption_text))
                             .setText("Failed to init recognizer " + result);
                 } else {
-                    switchSearch(KWS_SEARCH);
+                    switchSearch(HEXY_SEARCH);
                 }
             }
         }.execute();
@@ -154,20 +157,9 @@ public class PocketSphinxActivity extends Activity implements
      */
     @Override
     public void onPartialResult(Hypothesis hypothesis) {
-        if (hypothesis == null)
-            return;
 
-        String text = hypothesis.getHypstr();
-        if (text.equals(KEYPHRASE))
-            switchSearch(MENU_SEARCH);
-        else if (text.equals(DIGITS_SEARCH))
-            switchSearch(DIGITS_SEARCH);
-        else if (text.equals(PHONE_SEARCH))
-            switchSearch(PHONE_SEARCH);
-        else if (text.equals(FORECAST_SEARCH))
-            switchSearch(FORECAST_SEARCH);
-        else
-            ((TextView) findViewById(R.id.result_text)).setText(text);
+
+
     }
 
     /**
@@ -178,12 +170,72 @@ public class PocketSphinxActivity extends Activity implements
         ((TextView) findViewById(R.id.result_text)).setText("");
         if (hypothesis != null) {
             String text = hypothesis.getHypstr();
-            makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
+            makeText(getApplicationContext(), "hypothesis = " + text, Toast.LENGTH_SHORT).show();
+            if (text.equals("go")){
+
+                //);
+                //makeText(getApplicationContext(), "hexy go", Toast.LENGTH_SHORT).show();
+
+                Command("Walk");
+            }else if (text.equals("stop")){
+                Command("Idle");
+                //192.168.0.54/gait?value="Walk"
+                //192.168.0.54/gait?value="Idle"
+            }
         }
+    }
+
+    private void Command(String urlString) {
+        /*try {
+            //URL myurl = "http://192.168.0.54/gait?value=";
+
+            URL url = new URL("http://192.168.0.54:5000/gait?value=" + urlString);
+            final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setReadTimeout(10000 );
+            conn.setConnectTimeout(15000 );
+            conn.setRequestMethod("GET");
+            conn.setDoInput(true);
+            // Starts the query
+
+            Thread thread = new Thread(){
+                @Override
+                public void run(){
+
+                    try {
+                        conn.connect();
+                        int response = conn.getResponseCode();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+
+
+            };
+            thread.start();
+
+            //Log.d(DEBUG_TAG, "The response is: " + response);
+            //is = conn.getInputStream();
+
+            // Convert the InputStream into a string
+
+
+            // Makes sure that the InputStream is closed after the app is
+            // finished using it.
+        } catch (ProtocolException e) {
+            e.printStackTrace();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+
+        }*/
     }
 
     @Override
     public void onBeginningOfSpeech() {
+
     }
 
     /**
@@ -191,18 +243,15 @@ public class PocketSphinxActivity extends Activity implements
      */
     @Override
     public void onEndOfSpeech() {
-        if (!recognizer.getSearchName().equals(KWS_SEARCH))
-            switchSearch(KWS_SEARCH);
+
+            switchSearch(HEXY_SEARCH);
     }
 
     private void switchSearch(String searchName) {
         recognizer.stop();
 
         // If we are not spotting, start listening with timeout (10000 ms or 10 seconds).
-        if (searchName.equals(KWS_SEARCH))
             recognizer.startListening(searchName);
-        else
-            recognizer.startListening(searchName, 10000);
 
         String caption = getResources().getString(captions.get(searchName));
         ((TextView) findViewById(R.id.caption_text)).setText(caption);
@@ -215,9 +264,8 @@ public class PocketSphinxActivity extends Activity implements
         recognizer = SpeechRecognizerSetup.defaultSetup()
                 .setAcousticModel(new File(assetsDir, "en-us-ptm"))
                 .setDictionary(new File(assetsDir, "cmudict-en-us.dict"))
-
                 .setRawLogDir(assetsDir) // To disable logging of raw audio comment out this call (takes a lot of space on the device)
-                .setKeywordThreshold(1e-45f) // Threshold to tune for keyphrase to balance between false alarms and misses
+                .setKeywordThreshold(1e-45f)//1e-45f) // Threshold to tune for keyphrase to balance between false alarms and misses
                 .setBoolean("-allphone_ci", true)  // Use context-independent phonetic search, context-dependent is too slow for mobile
 
 
@@ -229,23 +277,26 @@ public class PocketSphinxActivity extends Activity implements
          */
 
         // Create keyword-activation search.
-        recognizer.addKeyphraseSearch(KWS_SEARCH, KEYPHRASE);
+        //recognizer.addKeyphraseSearch(KWS_SEARCH, KEYPHRASE);
 
         // Create grammar-based search for selection between demos
-        File menuGrammar = new File(assetsDir, "menu.gram");
-        recognizer.addGrammarSearch(MENU_SEARCH, menuGrammar);
+        //File menuGrammar = new File(assetsDir, "menu.gram");
+        //recognizer.addGrammarSearch(MENU_SEARCH, menuGrammar);
+
+        File hexyGrammar = new File(assetsDir, "hexy.gram");
+        recognizer.addGrammarSearch(HEXY_SEARCH, hexyGrammar);
 
         // Create grammar-based search for digit recognition
-        File digitsGrammar = new File(assetsDir, "digits.gram");
-        recognizer.addGrammarSearch(DIGITS_SEARCH, digitsGrammar);
+        //File digitsGrammar = new File(assetsDir, "digits.gram");
+        //recognizer.addGrammarSearch(DIGITS_SEARCH, digitsGrammar);
 
         // Create language model search
-        File languageModel = new File(assetsDir, "weather.dmp");
-        recognizer.addNgramSearch(FORECAST_SEARCH, languageModel);
+        //File languageModel = new File(assetsDir, "weather.dmp");
+        //recognizer.addNgramSearch(FORECAST_SEARCH, languageModel);
 
         // Phonetic search
-        File phoneticModel = new File(assetsDir, "en-phone.dmp");
-        recognizer.addAllphoneSearch(PHONE_SEARCH, phoneticModel);
+       // File phoneticModel = new File(assetsDir, "en-phone.dmp");
+        //recognizer.addAllphoneSearch(PHONE_SEARCH, phoneticModel);
     }
 
     @Override
@@ -255,6 +306,6 @@ public class PocketSphinxActivity extends Activity implements
 
     @Override
     public void onTimeout() {
-        switchSearch(KWS_SEARCH);
+        switchSearch(HEXY_SEARCH);
     }
 }
